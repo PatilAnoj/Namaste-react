@@ -1,65 +1,49 @@
 import { SWIGGY_RES_LIST_API_LINK } from "../utils/constants";
 import RestaurantCard from "./RestaurantCard";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ShimmerCard from "./Shimmer";
 import { Link } from "react-router-dom";
+import useFetchData from "../utils/useFetchData";
+import useOnlineStatus from "../utils/useOnlineStatus";
 
 const HomepageBody = () => {
-  const [restaurantDataList, setRestaurantDataList] = useState([]);
-  const [filteredResList, setFilteredResList] = useState([]);
-  const [loading,setLoading]=useState(true);
-  const[error,setError]=useState(false);
-
-  useEffect(() => {
-    fetchData();
-    // console.log("useeffect loaded");
-    // console.log(filteredResList.length);
-  },[]);
-
-  const fetchData = async () => {
-    try {
-      const jsonData = await fetch(SWIGGY_RES_LIST_API_LINK);
-      const resListdata = await jsonData.json();
-      const restaurants =
-        resListdata?.data?.cards[2]?.card?.card?.gridElements?.infoWithStyle
-          ?.restaurants || [];
-      setRestaurantDataList(restaurants);
-      setFilteredResList(restaurants);
-      // console.log("fetch data")
-    } catch (error) {
-      // console.error("Failed to fetch restaurant data:", error);
-      setError(true);
-    }finally{
-      setLoading(false);
-    }
-  }  
-
+  const [filteredResList, setFilteredResList] = useState(null);
+  const onlineStatus=useOnlineStatus();
+  
+  const {data,error,loading}=useFetchData(SWIGGY_RES_LIST_API_LINK);
+  const restaurants = data?.data?.cards[2]?.card?.card?.gridElements?.infoWithStyle?.restaurants || [];
+  
+ 
+  if(!onlineStatus) return (<div>Seems like you are Offline, please check your internet connection.</div>);
   if(loading) return (<div><ShimmerCard/> {console.log("shimmer loaded")}</div>);
   if(error) return(<div>failed to fetch data</div>);
-
+  
+  
   const handleTopRatedResList = () => {
-    const topRatedRes = restaurantDataList.filter(
+    const topRatedRes = restaurants.filter(
       (restaurant) => restaurant.info.avgRating >= 4.5
     );
     setFilteredResList(topRatedRes);
   };
 
   return (
-    <div className="homepage-body">
-      <div className="filters">
+    <div className="w-full box-border flex flex-col">
+      <div className="my-2 p-1">
         <button
+          className="mx-2 border py-2 px-3 rounded-2xl hover:border-red-500 hover:bg-red-500 hover:text-white"
           onClick={() => {
-            setFilteredResList(restaurantDataList);
+            setFilteredResList(restaurants);
           }}
         >
           ALL
         </button>
-        {/* {console.log("component loaded", filteredResList.length)} */}
-        <button onClick={handleTopRatedResList}>Top rated Restaurants</button>
+        <button
+          className="mx-2 border py-2 px-3 rounded-2xl  hover:border-red-500 hover:bg-red-500 hover:text-white"
+        onClick={handleTopRatedResList}>Top rated Restaurants</button>
       </div>
-      <div className="homepage-body-container">
-        {filteredResList.map((data) => (
-          <Link key={data.info.id} to={"/restaurantdetails/"+ data.info.id}><RestaurantCard  restaurantData={data.info} /></Link>
+      <div className="flex flex-wrap gap-4 mx-auto  w-10/12 py-2">
+        {(filteredResList ?? restaurants).map((list) => (
+          <Link key={list.info.id} to={"/restaurantdetails/"+ list.info.id}><RestaurantCard  restaurantData={list.info} /></Link>
         ))}
       </div>
     </div>
